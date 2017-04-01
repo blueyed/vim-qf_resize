@@ -32,3 +32,14 @@ Can be a buffer setting (for the qf buffer).
 ### `g:qf_resize_on_win_close`
 
 Resize/handle all qf windows when a window gets closed.  Default: 1.
+
+## Commands
+
+### `QfResizeWindows`
+
+Resize all quickfix/location list windows on the current tab page.
+
+This is useful in a custom mapping (extending the default
+<kbd>Ctrl</kbd>-<kbd>w</kbd> <kbd>=</kbd>):
+
+    nnoremap <silent> <c-w>= :wincmd =<cr>:QfResizeWindows<cr>
