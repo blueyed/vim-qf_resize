@@ -43,3 +43,10 @@ This is useful in a custom mapping (extending the default
 <kbd>Ctrl</kbd>-<kbd>w</kbd> <kbd>=</kbd>):
 
     nnoremap <silent> <c-w>= :wincmd =<cr>:QfResizeWindows<cr>
+
+## Other plugins
+
+- [vim-qf](https://github.com/romainl/vim-qf) provides a similar feature
+  (`g:qf_auto_resize`), without handling :lopen/:copen etc in general
+  though (but only when opening windows itself), and is less advanced
+  in general (no ratio).
