@@ -110,23 +110,23 @@ function! s:adjust_window_height() abort
   call s:log(printf('maxheight: %d, minheight: %d, qf_height: %s, diff: %d', maxheight, minheight, qf_height, diff))
   if diff == 0
     call s:log('no diff')
+  elseif !non_qf_above
+    call s:log('no non-qf window above')
+    let diff = 0
   else
-    if non_qf_above && !qf_window_appeared
+    if !qf_window_appeared
       let above_prev_height = non_qf_above_height
     endif
     exe cur_win 'resize' qf_height
 
-    if non_qf_above
-      if qf_window_appeared
-        let l = s:tracked_heights
-        let old_size = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] - qf_height
-        exe non_qf_above.'resize '.old_size
-        let s:tracked_heights = {}
-      else
-        let above_new_height = above_prev_height - diff
-        if above_new_height != winheight(non_qf_above)
-          exe non_qf_above.'resize '.above_new_height
-        endif
+    if qf_window_appeared
+      let old_size = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] - qf_height
+      exe non_qf_above.'resize '.old_size
+      let s:tracked_heights = {}
+    else
+      let above_new_height = above_prev_height - diff
+      if above_new_height != winheight(non_qf_above)
+        exe non_qf_above.'resize '.above_new_height
       endif
     endif
   endif

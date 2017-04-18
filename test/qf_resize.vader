@@ -168,3 +168,38 @@ Execute (qf_resize#get_maxheight):
   AssertEqual qf_resize#get_maxheight(21), 11
   AssertEqual qf_resize#get_maxheight(52), 26
   AssertEqual qf_resize#get_maxheight(53), 27
+
+Execute (qf without window above, quit from outside):
+  Save &equalalways
+  set noequalalways
+  let &lines = 100
+
+  copen
+  AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+  wincmd p
+  vsplit
+  lgetexpr '1'
+  lopen
+
+  AssertEqual [89, 1, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+  1wincmd q
+  AssertEqual [91, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+Execute (qf without window above, quit from within):
+  Save &equalalways
+  set noequalalways
+  let &lines = 100
+
+  copen
+  AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+  wincmd p
+  vsplit
+  lgetexpr '1'
+  lopen
+
+  AssertEqual [89, 1, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+  1wincmd w
+  quit
+  AssertEqual [91, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
