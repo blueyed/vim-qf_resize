@@ -65,6 +65,12 @@ function! s:adjust_window_height() abort
   if !exists('b:_qf_resize_seen')
     let b:_qf_resize_seen = 1
     let qf_window_appeared = 1
+    if (!has_key(s:tracked_heights, 'WinEnter')
+          \     || s:tracked_heights['WinEnter'][0] != winnr('$'))
+      " Happens when using 'noautocmd lopen', or :lopen being used from a
+      " non-nested autocommand.
+      let qf_window_appeared = 0
+    endif
   else
     let qf_window_appeared = 0
   endif
@@ -99,14 +105,6 @@ function! s:adjust_window_height() abort
   if diff == 0
     call s:log('no diff')
   else
-    if qf_window_appeared
-          \ && (!has_key(s:tracked_heights, 'WinEnter')
-          \     || s:tracked_heights['WinEnter'][0] != winnr('$'))
-      " Happens when using 'noautocmd lopen', or :lopen being used from a
-      " non-nested autocommand.
-      let qf_window_appeared = 0
-    endif
-
     if non_qf_above && !qf_window_appeared
       let above_prev_height = non_qf_above_height
     endif
