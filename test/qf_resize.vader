@@ -42,7 +42,7 @@ Execute (equalalways: 100 lines, ):
   noautocmd lclose
   AssertEqual [46, 46], map(range(1, winnr('$')), 'winheight(v:val)')
   lopen
-  AssertEqual [46, 39, 6], map(range(1, winnr('$')), 'winheight(v:val)')
+  AssertEqual [46, 38, 7], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (noequalalways: noautocmd):
   Save &equalalways
@@ -66,7 +66,7 @@ Execute (noequalalways: autocmd):
   10wincmd _
   AssertEqual [82, 10], map(range(1, winnr('$')), 'winheight(v:val)')
   lopen
-  AssertEqual [82, 8, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+  AssertEqual [82, 7, 2], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (noequalalways: 2 windows, 89/3 lines, 12 items):
   Save &equalalways
@@ -92,7 +92,7 @@ Execute (noequalalways: 2 windows, 72/20 lines, 12 items in 2nd window):
 
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
   lopen
-  AssertEqual [72, 17, 2], map(range(1, winnr('$')), 'winheight(v:val)')
+  AssertEqual [72, 16, 3], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lgetexpr ['1']
   AssertEqual [72, 18, 1], map(range(1, winnr('$')), 'winheight(v:val)')
@@ -155,13 +155,16 @@ Execute (lopen with noautocmd and :QfResizeWindows):
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (qf_resize#get_maxheight):
-  AssertEqual qf_resize#get_maxheight(10, 3), 1
-  AssertEqual qf_resize#get_maxheight(10, 10), 3
-  AssertEqual qf_resize#get_maxheight(50, 1), 7
+  AssertEqual qf_resize#get_maxheight(5), 1
+  AssertEqual qf_resize#get_maxheight(14), 2
+  AssertEqual qf_resize#get_maxheight(21), 3
+  AssertEqual qf_resize#get_maxheight(52), 8
 
   Save g:qf_resize_max_ratio
   let g:qf_resize_max_ratio = 0.5
-  AssertEqual qf_resize#get_maxheight(10, 3), 6
-  AssertEqual qf_resize#get_maxheight(10, 10), 10
-  AssertEqual qf_resize#get_maxheight(50, 1), 25
-  AssertEqual qf_resize#get_maxheight(50, 2), 26
+  AssertEqual qf_resize#get_maxheight(12), 6
+  AssertEqual qf_resize#get_maxheight(13), 7
+  AssertEqual qf_resize#get_maxheight(14), 7
+  AssertEqual qf_resize#get_maxheight(21), 11
+  AssertEqual qf_resize#get_maxheight(52), 26
+  AssertEqual qf_resize#get_maxheight(53), 27
