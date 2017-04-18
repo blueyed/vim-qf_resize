@@ -94,7 +94,13 @@ function! s:adjust_window_height() abort
   let maxheight = get(b:, 'qf_resize_max_height', get(g:, 'qf_resize_max_height', 10))
   if non_qf_above
     let non_qf_above_height = winheight(non_qf_above)
-    let maxheight = min([maxheight, qf_resize#get_maxheight(non_qf_above_height, cur_qf_height)])
+
+    if qf_window_appeared
+      let height = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] + 1
+    else
+      let height = non_qf_above_height + cur_qf_height + 1
+    endif
+    let maxheight = min([maxheight, qf_resize#get_maxheight(height)])
   else
   endif
   let maxheight = max([minheight, maxheight])
