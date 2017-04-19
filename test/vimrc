@@ -1,0 +1,53 @@
+" Vimrc for tests.
+" Based on https://github.com/neomake/neomake/blob/master/tests/vim/vimrc.
+
+set noloadplugins
+
+if exists('$TESTS_VADER_DIR')
+  let vader_dir = expand($TESTS_VADER_DIR)
+else
+  let vader_dir = expand('~/.vim/plugged/vader.vim')
+endif
+let &runtimepath .= ','.vader_dir
+exe 'source' vader_dir.'/plugin/vader.vim'
+
+let plugin_dir = expand('<sfile>:p:h:h')
+let &runtimepath .= ','.plugin_dir
+exe 'source' plugin_dir.'/plugin/qf_resize.vim'
+
+filetype plugin indent on
+
+augroup ssshhhhhh
+  autocmd VimEnter * set visualbell t_vb=
+  autocmd GUIEnter * set visualbell t_vb=
+augroup END
+
+set noswapfile
+syntax on
+set number
+set background=dark
+set colorcolumn=80
+set showcmd
+set lazyredraw
+set tabstop=4
+set softtabstop=4
+set shiftwidth=4
+set expandtab
+set backspace=2
+set nofoldenable
+set foldmethod=syntax
+set foldlevelstart=10
+set foldnestmax=10
+set ttimeoutlen=0
+set cmdheight=5
+set textwidth=79
+set hidden
+set splitbelow  " Easier for window numbers (incrementing).
+
+
+set debug=msg,throw
+
+let mapleader=','
+
+" No '-- More --' prompt, which would hang Travis.
+set nomore
