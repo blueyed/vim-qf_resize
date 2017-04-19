@@ -15,8 +15,9 @@ test_nvim_interactive: $(TESTS_VADER_DIR)
 run_nvim: $(TESTS_VADER_DIR)
 	HOME=$(shell mktemp -d) nvim -u test/vimrc
 
+test_vim: TEST_VIM_BIN ?= vim
 test_vim: $(TESTS_VADER_DIR)
-	$(call func-run-tests,vim -X)
+	$(call func-run-tests,$(TEST_VIM_BIN) -X)
 
 define func-run-tests
 	$(1) --noplugin -Nu test/vimrc -c 'Vader! test/*.vader' >/dev/null
