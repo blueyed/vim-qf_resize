@@ -81,9 +81,12 @@ function! s:adjust_window_height() abort
   " Get minimum height (given more lines than that).
   let minheight = get(b:, 'qf_resize_min_height', get(g:, 'qf_resize_min_height', -1))
   if minheight == -1
-    if getbufvar(winbufnr(cur_win), 'dispatch_all', 0)
+    " Some opinionated defaults.
+    if exists('b:dispatch')
+      " dispatch.vim
       let minheight = 15
-    elseif getwinvar(cur_win, 'quickfix_title', '') =~# '\v^:.*py.?test'
+    elseif getwinvar(cur_win, 'quickfix_title') =~# '\v^:.*py.?test'
+      " test.vim, running pytest.
       let minheight = max([5, &lines/5])
     else
       let minheight = 1
