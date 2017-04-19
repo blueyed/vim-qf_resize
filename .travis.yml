@@ -1,0 +1,25 @@
+language: python
+python:
+  - "3.5"
+
+branches:
+  only:
+    - master
+
+env:
+  matrix:
+    - ENV=vimlint
+    - ENV=test_nvim
+    - ENV=test_vim
+    - ENV=vint
+
+matrix:
+  fast_finish: true
+
+install:
+  - |
+    if [ "$ENV" = "test_nvim" ]; then
+      eval "$(curl -Ss https://raw.githubusercontent.com/neovim/bot-ci/master/scripts/travis-setup.sh) nightly-x64"
+    fi
+
+script: make $ENV

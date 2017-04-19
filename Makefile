@@ -21,3 +21,24 @@ test_vim: $(TESTS_VADER_DIR)
 define func-run-tests
 	$(1) --noplugin -Nu test/vimrc -c 'Vader! test/*.vader' >/dev/null
 endef
+
+build:
+	mkdir $@
+
+LINT_ARGS:=./plugin ./autoload
+
+build/vint: | build
+	virtualenv $@
+	$@/bin/pip install vim-vint
+vint: build/vint
+	build/vint/bin/vint $(LINT_ARGS)
+vint-errors: build/vint
+	build/vint/bin/vint --error $(LINT_ARGS)
+
+# vimlint
+build/vimlint: | build
+	git clone --depth=1 https://github.com/syngan/vim-vimlint $@
+build/vimlparser: | build
+	git clone --depth=1 https://github.com/ynkdir/vim-vimlparser $@
+vimlint: build/vimlint build/vimlparser
+	build/vimlint/bin/vimlint.sh -u -l build/vimlint -p build/vimlparser $(LINT_ARGS)
