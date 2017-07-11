@@ -1,5 +1,7 @@
 Before:
   tabnew
+  Save g:qf_resize_in_test
+  let g:qf_resize_in_test = 1
 
 After:
   Restore
@@ -203,3 +205,58 @@ Execute (qf without window above, quit from within):
   1wincmd w
   quit
   AssertEqual [91, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+Execute (normal, loclist, qf):
+  Save &equalalways
+  set noequalalways
+  let &lines = 100
+
+  lgetexpr '1'
+  lopen
+  AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+  resize 10
+  AssertEqual [82, 10], map(range(1, winnr('$')), 'winheight(v:val)')
+
+  copen
+  AssertEqual [89, 1, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+Execute (normal, fixed, loclist):
+  Save &equalalways
+  set noequalalways
+  let &lines = 100
+
+  new
+  set winfixheight
+  AssertEqual [46, 46], map(range(1, winnr('$')), 'winheight(v:val)')
+
+  lgetexpr '1'
+  lopen
+  AssertEqual [44, 46, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+Execute (normal, fixed, loclist):
+  Save &equalalways
+  set noequalalways
+  let &lines = 100
+
+  laddexpr 'loc1'
+  lopen
+  AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+  wincmd p
+  vsp
+  AssertEqual [91, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+  lgetexpr 'loc2'
+  lopen
+  AssertEqual [89, 1, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+  cgetexpr 'qf1'
+  AssertThrows copen
+  AssertEqual g:vader_exception, 'Vim(copen):E36: Not enough room'
+  AssertEqual [89, 1, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+
+  set equalalways
+  noautocmd copen
+  AssertEqual [['', 58], ['qf', 21], ['', 80], ['qf', 1], ['qf', 10]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+  copen
+
+  AssertEqual [['', 87], ['qf', 1], ['', 89], ['qf', 1], ['qf', 1]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
