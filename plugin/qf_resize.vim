@@ -65,6 +65,8 @@ endfunction
 
 function! s:adjust_window_height() abort
   let cur_win = winnr()
+  call s:log('Called for window '.cur_win
+        \ .'; window layout: '.string(map(range(1, winnr('$')), 'winheight(v:val)')))
 
   if !exists('b:_qf_resize_seen')
     let b:_qf_resize_seen = 1
@@ -120,15 +122,18 @@ function! s:adjust_window_height() abort
   if diff == 0
     call s:log('no diff')
   else
+    call s:log('resizing (1): '.cur_win.' resize '.qf_height)
     exe cur_win 'resize' qf_height
 
     if qf_window_appeared && non_fixed_above == s:tracked_heights['WinLeave'][0]
       let old_size = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] - qf_height
+      call s:log('resizing non_fixed_above: '.non_fixed_above.' resize '.old_size)
       exe non_fixed_above.'resize '.old_size
       let s:tracked_heights = {}
     else
       let above_new_height = non_fixed_above_height - diff
       if above_new_height != winheight(non_fixed_above)
+        call s:log('resizing non_fixed_above (2): '.non_fixed_above.' resize '.above_new_height)
         exe non_fixed_above.'resize '.above_new_height
       endif
     endif
