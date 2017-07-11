@@ -1,6 +1,6 @@
 function! s:log(msg) abort
-  if exists('g:vader_file')
-    Log a:msg
+  if exists('*vader#log')
+    call vader#log(a:msg)
   elseif &verbose
     echom 'adjust_window_height: '.a:msg
   endif
