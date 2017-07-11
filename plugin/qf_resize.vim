@@ -6,7 +6,8 @@ function! s:log(msg) abort
   endif
 endfunction
 
-function! s:get_nonqf_in_dir(dir) abort
+function! s:get_nonfixed_in_dir(dir) abort
+  let qfs_above = []
   let restore = winnr()
   try
     let prev_winnr = restore
@@ -14,10 +15,13 @@ function! s:get_nonqf_in_dir(dir) abort
       exe 'noautocmd wincmd' a:dir
       let w = winnr()
       if w == prev_winnr
-        return 0
+        return [0, qfs_above]
       endif
-      if &filetype !=# 'qf'
-        return w
+      if !&winfixheight
+        return [w, qfs_above]
+      endif
+      if &filetype ==# 'qf'
+        let qfs_above += [w]
       endif
       let prev_winnr = w
     endwhile
@@ -65,8 +69,8 @@ function! s:adjust_window_height() abort
   if !exists('b:_qf_resize_seen')
     let b:_qf_resize_seen = 1
     let qf_window_appeared = 1
-    if (!has_key(s:tracked_heights, 'WinEnter')
-          \     || s:tracked_heights['WinEnter'][0] != winnr('$'))
+    if !has_key(s:tracked_heights, 'WinEnter')
+          \ || s:tracked_heights['WinEnter'][0] != winnr()
       " Happens when using 'noautocmd lopen', or :lopen being used from a
       " non-nested autocommand.
       let qf_window_appeared = 0
@@ -76,7 +80,7 @@ function! s:adjust_window_height() abort
   endif
 
   " Get first non-qf window above.
-  let non_qf_above = s:get_nonqf_in_dir('k')
+  let [non_fixed_above, qfs_above] = s:get_nonfixed_in_dir('k')
 
   " Get minimum height (given more lines than that).
   let minheight = get(b:, 'qf_resize_min_height', get(g:, 'qf_resize_min_height', -1))
@@ -95,13 +99,13 @@ function! s:adjust_window_height() abort
 
   let cur_qf_height = winheight(cur_win)
   let maxheight = get(b:, 'qf_resize_max_height', get(g:, 'qf_resize_max_height', 10))
-  if non_qf_above
-    let non_qf_above_height = winheight(non_qf_above)
+  if non_fixed_above
+    let non_fixed_above_height = winheight(non_fixed_above)
 
-    if qf_window_appeared
+    if qf_window_appeared && non_fixed_above == s:tracked_heights['WinLeave'][0]
       let height = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] + 1
     else
-      let height = non_qf_above_height + cur_qf_height + 1
+      let height = non_fixed_above_height + cur_qf_height + 1
     endif
     let maxheight = min([maxheight, qf_resize#get_maxheight(height)])
   else
@@ -112,43 +116,52 @@ function! s:adjust_window_height() abort
   let lines = line('$')
   let qf_height = min([maxheight, lines])
   let diff = qf_height - cur_qf_height
-  call s:log(printf('maxheight: %d, minheight: %d, qf_height: %s, diff: %d', maxheight, minheight, qf_height, diff))
+  call s:log(printf('maxheight: %d, minheight: %d, qf_height: %s, cur_qf_height: %d, diff: %d', maxheight, minheight, qf_height, cur_qf_height, diff))
   if diff == 0
     call s:log('no diff')
   else
     exe cur_win 'resize' qf_height
 
-    if qf_window_appeared
+    if qf_window_appeared && non_fixed_above == s:tracked_heights['WinLeave'][0]
       let old_size = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] - qf_height
-      exe non_qf_above.'resize '.old_size
+      exe non_fixed_above.'resize '.old_size
       let s:tracked_heights = {}
     else
-      let above_new_height = non_qf_above_height - diff
-      if above_new_height != winheight(non_qf_above)
-        exe non_qf_above.'resize '.above_new_height
+      let above_new_height = non_fixed_above_height - diff
+      if above_new_height != winheight(non_fixed_above)
+        exe non_fixed_above.'resize '.above_new_height
       endif
     endif
+  endif
+
+  " Need to handle other qf windows above.
+  if !empty(qfs_above)
+    call s:adjust_window_heights(qfs_above)
   endif
   return diff
 endfunction
 
-function! s:adjust_window_heights() abort
-  if has('vim_starting') && !exists('g:vader_file')
-    return
-  endif
-
-  if get(w:, 'quickfix_title', '') =~# '\v^:noautocmd cgetfile '
-    " Skipping dispatch, will be done through user autocmd (DispatchQuickfix).
-    return
-  endif
-
-  let windows = []
-  for w in reverse(range(1, winnr('$')))
-    if getwinvar(w, '&ft') ==# 'qf'
-      let windows += [w]
+function! s:adjust_window_heights(...) abort
+  if a:0
+    let windows = a:1
+  else
+    if has('vim_starting') && !exists('g:vader_file')
+      return
     endif
-  endfor
-  if !len(windows)
+
+    if get(w:, 'quickfix_title', '') =~# '\v^:noautocmd cgetfile '
+      " Skipping dispatch, will be done through user autocmd (DispatchQuickfix).
+      return
+    endif
+
+    let windows = []
+    for w in reverse(range(1, winnr('$')))
+      if getwinvar(w, '&ft') ==# 'qf'
+        let windows += [w]
+      endif
+    endfor
+  endif
+  if empty(windows)
     return
   endif
 
@@ -193,17 +206,19 @@ endfunction
 
 let s:tracked_heights = {}
 function! s:track_heights(event) abort
-  let height = winheight(0)
   if a:event ==# 'WinEnter'
-    if has_key(s:tracked_heights, 'WinLeave')
-      if s:tracked_heights['WinLeave'][0] != winnr('$')
-        " WinEnter did not follow WinLeave for a new window.
-        let s:tracked_heights = {}
-        return
-      endif
+    if get(s:tracked_heights, 'WinLeave', [0, 0])[0] != winnr('#')
+      " WinEnter did not follow WinLeave for a new window.
+      let s:tracked_heights = {}
+    else
+      let s:tracked_heights['WinEnter'] = [winnr(), winheight(0)]
     endif
+  else
+    let s:tracked_heights = {'WinLeave': [winnr(), winheight(0)]}
   endif
-  let s:tracked_heights[a:event] = [winnr('$'), height]
+  call s:log(printf('tracked_heights: %s (#%d): %s',
+        \ a:event, winnr(), string(s:tracked_heights)))
+  call s:log(string(map(range(1, winnr('$')), 'winheight(v:val)')))
 endfunction
 
 augroup qf_resize
