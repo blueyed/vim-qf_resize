@@ -1,3 +1,5 @@
+SHELL:=/bin/bash -o pipefail
+
 test: test_nvim
 
 DEFAULT_VADER_DIR:=test/vim/plugins/vader
@@ -5,6 +7,12 @@ export TESTS_VADER_DIR:=$(firstword $(realpath $(wildcard test/vim/plugins/vader
 $(DEFAULT_VADER_DIR):
 	mkdir -p $(dir $@)
 	git clone --depth=1 -b display-source-with-exceptions https://github.com/blueyed/vader.vim $@
+
+# Add coloring to Vader's output.
+_SED_HIGHLIGHT_ERRORS:=| contrib/highlight-log --compact vader
+# Need to close stdin to fix spurious 'sed: couldn't write X items to stdout: Resource temporarily unavailable'.
+# Redirect to stderr again for Docker (where only stderr is used from).
+_REDIR_STDOUT:=2>&1 </dev/null >/dev/null $(_SED_HIGHLIGHT_ERRORS) >&2
 
 test_nvim: $(TESTS_VADER_DIR)
 	$(call func-run-tests,VADER_OUTPUT_FILE=/dev/stderr nvim --headless)
@@ -20,7 +28,7 @@ test_vim: $(TESTS_VADER_DIR)
 	$(call func-run-tests,$(TEST_VIM_BIN) -X)
 
 define func-run-tests
-	$(1) --noplugin -Nu test/vimrc -c 'Vader! test/*.vader' >/dev/null
+	$(1) --noplugin -Nu test/vimrc -c 'Vader! test/*.vader' $(_REDIR_STDOUT)
 endef
 
 build:
