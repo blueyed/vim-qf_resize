@@ -2,24 +2,22 @@
 
 Automatically resize quickfix and location list windows.
 
-It will resize location/quickfix windows based on the number of lines therein;
-e.g. with a single list entry, why waste 10 lines (the default height)?!
-
-With vim-test/dispatch-neovim etc., and on VimResized it will process all
-existing qf windows.
+This Vim plugin resizes location/quickfix windows based on the number of lines
+therein, i.e. with a single list entry, why waste 9 extra lines (with the
+default window height being 10)?!
 
 ## Config
 
 ### `g:qf_resize_min_height`
 
-Minimum height in lines for qf windows.
+Minimum height (in lines) for quickfix windows.
 If not specified, it will use some (experimental) internal defaults, falling
 back to 1.
 Can be a buffer setting (for the qf buffer).
 
 ### `g:qf_resize_max_height`
 
-Maximum height in lines of qf windows.  Default: 10.
+Maximum height (in lines) for quickfix windows.  Default: 10.
 Can be a buffer setting (for the qf buffer).
 
 ### `g:qf_resize_max_ratio`
@@ -44,9 +42,9 @@ This is useful in a custom mapping (extending the default
 
     nnoremap <silent> <c-w>= :wincmd =<cr>:QfResizeWindows<cr>
 
-## Other plugins
+## Related plugins
 
 - [vim-qf](https://github.com/romainl/vim-qf) provides a similar feature
-  (`g:qf_auto_resize`), without handling :lopen/:copen etc in general
-  though (but only when opening windows itself), and is less advanced
-  in general (no ratio).
+  (`g:qf_auto_resize`), without handling `:lopen`/`:copen` etc in general,
+  but only when opening windows itself, and is less advanced in general (no
+  ratio etc).
