@@ -1,20 +1,18 @@
-language: python
-python:
-  - "3.5"
+sudo: false
+language: generic
 
 branches:
   only:
     - master
 
-env:
-  matrix:
-    - ENV=vimlint
-    - ENV=test_nvim
-    - ENV=test_vim
-    - ENV=vint
-
 matrix:
   fast_finish: true
+  include:
+    - env: ENV=vimlint
+    - env: ENV=test_nvim
+    - env: ENV=test_vim
+    - env: ENV=vint
+      language: python
 
 install:
   - |
