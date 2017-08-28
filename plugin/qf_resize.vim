@@ -1,3 +1,8 @@
+if exists('g:loaded_qf_resize')
+  finish
+endif
+let g:loaded_qf_resize = 1
+
 function! s:log(msg) abort
   if exists('*vader#log')
     call vader#log(a:msg)
