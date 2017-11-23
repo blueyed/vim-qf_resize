@@ -51,3 +51,15 @@ let mapleader=','
 
 " No '-- More --' prompt, which would hang Travis.
 set nomore
+
+function! TestLopen()
+  lopen
+  if has('patch-8.0.0677') | call feedkeys('', 'x') | endif
+endfunction
+command TestLopen call TestLopen()
+
+function! TestCopen()
+  copen
+  if has('patch-8.0.0677') | call feedkeys('', 'x') | endif
+endfunction
+command TestCopen call TestCopen()

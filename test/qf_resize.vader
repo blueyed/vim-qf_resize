@@ -12,13 +12,13 @@ Execute (Uses max 10):
   let &lines = 100
   Assert exists('#qf_resize')
   laddexpr ['1','2','3','4','5','6','7','8','9','10','11','12']
-  lopen
+  TestLopen
   AssertEqual winheight(2), 10
 
 Execute (Uses min 1):
   let &lines = 10
   laddexpr ['1','2','3','4','5','6','7','8','9','10','11','12']
-  lopen
+  TestLopen
   AssertEqual winheight(2), 1
 
 Execute (Uses g:qf_resize_min_height):
@@ -26,7 +26,7 @@ Execute (Uses g:qf_resize_min_height):
   let g:qf_resize_min_height = 2
   let &lines = 10
   laddexpr ['1','2','3','4','5','6','7','8','9','10','11','12']
-  lopen
+  TestLopen
   AssertEqual winheight(2), 2
 
 Execute (equalalways: 100 lines, ):
@@ -37,13 +37,13 @@ Execute (equalalways: 100 lines, ):
   laddexpr ['1','2','3','4','5','6','7','8','9','10','11','12']
   3wincmd _
   AssertEqual [89, 3], map(range(1, winnr('$')), 'winheight(v:val)')
-  noautocmd lopen
+  noautocmd TestLopen
   " Height of win 1 and 2 is different on vim73 (Travis).
   AssertEqual winheight(3), 10
 
   noautocmd lclose
   AssertEqual [46, 46], map(range(1, winnr('$')), 'winheight(v:val)')
-  lopen
+  TestLopen
   AssertEqual [46, 38, 7], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (noequalalways: noautocmd):
@@ -55,7 +55,7 @@ Execute (noequalalways: noautocmd):
   3wincmd _
   AssertEqual winheight(1), 89
   AssertEqual winheight(2), 3
-  noautocmd lopen
+  noautocmd TestLopen
   AssertEqual [80, 1, 10], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (noequalalways: autocmd):
@@ -67,7 +67,7 @@ Execute (noequalalways: autocmd):
 
   10wincmd _
   AssertEqual [82, 10], map(range(1, winnr('$')), 'winheight(v:val)')
-  lopen
+  TestLopen
   AssertEqual [82, 7, 2], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (noequalalways: 2 windows, 89/3 lines, 12 items):
@@ -80,7 +80,7 @@ Execute (noequalalways: 2 windows, 89/3 lines, 12 items):
   3wincmd _
 
   AssertEqual [89, 3], map(range(1, winnr('$')), 'winheight(v:val)')
-  lopen
+  TestLopen
   AssertEqual [89, 1, 1], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (noequalalways: 2 windows, 72/20 lines, 12 items in 2nd window):
@@ -93,10 +93,11 @@ Execute (noequalalways: 2 windows, 72/20 lines, 12 items in 2nd window):
   20wincmd _
 
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
-  lopen
+  TestLopen
   AssertEqual [72, 16, 3], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lgetexpr ['1']
+  if has('patch-8.0.0677') | call feedkeys('', 'x') | endif
   AssertEqual [72, 18, 1], map(range(1, winnr('$')), 'winheight(v:val)')
   lclose
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
@@ -112,10 +113,11 @@ Execute (noequalalways: 2 windows, 72/20 lines, 12 items in 1st window):
   1wincmd w
 
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
-  lopen
+  TestLopen
   AssertEqual [61, 10, 20], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lgetexpr ['1']
+  if has('patch-8.0.0677') | call feedkeys('', 'x') | endif
   AssertEqual [70, 1, 20], map(range(1, winnr('$')), 'winheight(v:val)')
   lclose
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
@@ -131,7 +133,7 @@ Execute (noequalalways: 2 windows, 72/20 lines, 1 item in 1st window):
   lgetexpr ['1']
 
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
-  lopen
+  TestLopen
   AssertEqual [70, 1, 20], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lclose
@@ -149,7 +151,7 @@ Execute (lopen with noautocmd and :QfResizeWindows):
 
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
   exe 'source' fnamemodify(g:vader_file, ':h:h').'/plugin/qf_resize.vim'
-  noautocmd lopen
+  noautocmd TestLopen
   QfResizeWindows
   AssertEqual [70, 1, 20], map(range(1, winnr('$')), 'winheight(v:val)')
 
@@ -176,12 +178,12 @@ Execute (qf without window above, quit from outside):
   set noequalalways
   let &lines = 100
 
-  copen
+  TestCopen
   AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
   wincmd p
   vsplit
   lgetexpr '1'
-  lopen
+  TestLopen
 
   AssertEqual [89, 1, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
 
@@ -193,12 +195,12 @@ Execute (qf without window above, quit from within):
   set noequalalways
   let &lines = 100
 
-  copen
+  TestCopen
   AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
   wincmd p
   vsplit
   lgetexpr '1'
-  lopen
+  TestLopen
 
   AssertEqual [89, 1, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
 
@@ -212,13 +214,13 @@ Execute (normal, loclist, qf):
   let &lines = 100
 
   lgetexpr '1'
-  lopen
+  TestLopen
   AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
 
   resize 10
   AssertEqual [82, 10], map(range(1, winnr('$')), 'winheight(v:val)')
 
-  copen
+  TestCopen
   AssertEqual [89, 1, 1], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (normal, fixed, loclist):
@@ -231,7 +233,7 @@ Execute (normal, fixed, loclist):
   AssertEqual [46, 46], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lgetexpr '1'
-  lopen
+  TestLopen
   AssertEqual [44, 46, 1], map(range(1, winnr('$')), 'winheight(v:val)')
 
 Execute (normal, fixed, loclist):
@@ -240,23 +242,23 @@ Execute (normal, fixed, loclist):
   let &lines = 100
 
   laddexpr 'loc1'
-  lopen
+  TestLopen
   AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
   wincmd p
   vsp
   AssertEqual [91, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
   lgetexpr 'loc2'
-  lopen
+  TestLopen
   AssertEqual [89, 1, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
 
   cgetexpr 'qf1'
-  AssertThrows copen
+  AssertThrows TestCopen
   AssertEqual g:vader_exception, 'Vim(copen):E36: Not enough room'
   AssertEqual [89, 1, 91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
 
   set equalalways
-  noautocmd copen
+  noautocmd TestCopen
   AssertEqual [['', 58], ['qf', 21], ['', 80], ['qf', 1], ['qf', 10]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
-  copen
+  TestCopen
 
   AssertEqual [['', 87], ['qf', 1], ['', 89], ['qf', 1], ['qf', 1]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
