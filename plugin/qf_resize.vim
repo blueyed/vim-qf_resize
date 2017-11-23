@@ -11,13 +11,16 @@ function! s:log(msg) abort
   endif
 endfunction
 
-function! s:get_nonfixed_in_dir(dir) abort
+function! s:get_nonfixed_above() abort
+  if winnr() == 1
+    return [0, []]
+  endif
   let qfs_above = []
   let restore = winnr()
   try
     let prev_winnr = restore
     while 1
-      exe 'noautocmd wincmd' a:dir
+      exe 'noautocmd wincmd k'
       let w = winnr()
       if w == prev_winnr
         return [0, qfs_above]
@@ -87,7 +90,7 @@ function! s:adjust_window_height() abort
   endif
 
   " Get first non-qf window above.
-  let [non_fixed_above, qfs_above] = s:get_nonfixed_in_dir('k')
+  let [non_fixed_above, qfs_above] = s:get_nonfixed_above()
 
   " Get minimum height (given more lines than that).
   let minheight = get(b:, 'qf_resize_min_height', get(g:, 'qf_resize_min_height', -1))
