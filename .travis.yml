@@ -9,7 +9,8 @@ matrix:
   fast_finish: true
   include:
     - env: ENV=vimlint
-    - env: ENV=test_nvim
+    - env: ENV=test_nvim VIM_QF_RESIZE_TESTS_USE_FEEDKEYS=0
+    - env: ENV=test_nvim VIM_QF_RESIZE_TESTS_USE_FEEDKEYS=1
     - env: ENV=test_vim
     - env: ENV=vint
       language: python

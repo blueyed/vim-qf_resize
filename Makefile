@@ -1,5 +1,7 @@
 SHELL:=/bin/bash -o pipefail
 
+VADER_ARGS:=test/*.vader
+
 test: test_nvim
 
 DEFAULT_VADER_DIR:=test/vim/plugins/vader
@@ -18,7 +20,7 @@ test_nvim: $(TESTS_VADER_DIR)
 	$(call func-run-tests,VADER_OUTPUT_FILE=/dev/stderr nvim --headless)
 
 test_nvim_interactive: $(TESTS_VADER_DIR)
-	HOME=$(shell mktemp -d) nvim -u test/vimrc -c 'Vader test/*.vader'
+	HOME=$(shell mktemp -d) nvim -u test/vimrc -c 'Vader $(VADER_ARGS)'
 
 run_nvim: $(TESTS_VADER_DIR)
 	HOME=$(shell mktemp -d) nvim -u test/vimrc
@@ -28,7 +30,7 @@ test_vim: $(TESTS_VADER_DIR)
 	$(call func-run-tests,$(TEST_VIM_BIN) -X)
 
 define func-run-tests
-	$(1) --noplugin -Nu test/vimrc -c 'Vader! test/*.vader' $(_REDIR_STDOUT)
+	$(1) --noplugin -Nu test/vimrc -c 'Vader! $(VADER_ARGS)' $(_REDIR_STDOUT)
 endef
 
 build:

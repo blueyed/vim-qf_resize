@@ -3,11 +3,15 @@ if exists('g:loaded_qf_resize')
 endif
 let g:loaded_qf_resize = 1
 
+if !exists('g:qf_resize_use_feedkeys')
+  let g:qf_resize_use_feedkeys = has('patch-8.0.0677')
+endif
+
 augroup qf_resize
   au!
-  if has('patch-8.0.0677')
+  if g:qf_resize_use_feedkeys
     " Workaround: E788: Not allowed to edit another buffer now
-    au FileType   qf call feedkeys("\<C-\>\<C-n>:call qf_resize#adjust_window_height()\n", 'n')
+    au FileType   qf call feedkeys("\<C-\>\<C-n>:call qf_resize#adjust_window_height(".winnr().")\n", 'n')
   else
     au FileType   qf call qf_resize#adjust_window_height()
   endif
