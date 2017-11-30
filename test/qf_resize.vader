@@ -95,7 +95,7 @@ Execute (noequalalways: 2 windows, 72/20 lines, 12 items in 2nd window):
   AssertEqual [72, 16, 3], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lgetexpr ['1']
-  if has('patch-8.0.0677') | call feedkeys('', 'x') | endif
+  if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
   AssertEqual [72, 18, 1], map(range(1, winnr('$')), 'winheight(v:val)')
   lclose
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
@@ -115,7 +115,7 @@ Execute (noequalalways: 2 windows, 72/20 lines, 12 items in 1st window):
   AssertEqual [61, 10, 20], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lgetexpr ['1']
-  if has('patch-8.0.0677') | call feedkeys('', 'x') | endif
+  if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
   AssertEqual [70, 1, 20], map(range(1, winnr('$')), 'winheight(v:val)')
   lclose
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
@@ -260,3 +260,19 @@ Execute (normal, fixed, loclist):
   TestCopen
 
   AssertEqual [['', 87], ['qf', 1], ['', 89], ['qf', 1], ['qf', 1]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+
+Execute (Handles processing from another window):
+  Save &lines
+  let &lines = 100
+
+  " Open empty location list.
+  lgetexpr ''
+  TestLopen
+  1wincmd w
+  AssertEqual winheight(2), 1
+
+  " Set location list while in another window.
+  call setloclist(0, [{'text': '1'}, {'text': '2'}])
+  if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
+
+  AssertEqual winheight(2), 2

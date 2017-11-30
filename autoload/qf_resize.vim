@@ -13,22 +13,26 @@ function! s:log(msg) abort
   endif
 endfunction
 
-function! s:get_nonfixed_above() abort
-  if winnr() == 1
-    return [0, []]
+function! s:get_nonfixed_above(win) abort
+  if a:win == 1
+    return [0, [], line('$')]
   endif
   let qfs_above = []
   let restore = winnr()
   try
-    let prev_winnr = restore
+    if a:win != restore
+      exe 'keepalt noautocmd' a:win 'wincmd w'
+    endif
+    let lines = line('$')
+    let prev_winnr = a:win
     while 1
       exe 'noautocmd wincmd k'
       let w = winnr()
       if w == prev_winnr
-        return [0, qfs_above]
+        return [0, qfs_above, lines]
       endif
       if !&winfixheight
-        return [w, qfs_above]
+        return [w, qfs_above, lines]
       endif
       if &filetype ==# 'qf'
         let qfs_above += [w]
@@ -73,8 +77,8 @@ function! s:restore_prev_windows() abort
   endif
 endfunction
 
-function! qf_resize#adjust_window_height() abort
-  let cur_win = winnr()
+function! qf_resize#adjust_window_height(...) abort
+  let cur_win = a:0 ? a:1 : winnr()
   call s:log('Called for window '.cur_win
         \ .'; window layout: '.string(map(range(1, winnr('$')), 'winheight(v:val)')))
 
@@ -92,7 +96,7 @@ function! qf_resize#adjust_window_height() abort
   endif
 
   " Get first non-qf window above.
-  let [non_fixed_above, qfs_above] = s:get_nonfixed_above()
+  let [non_fixed_above, qfs_above, lines] = s:get_nonfixed_above(cur_win)
 
   " Get minimum height (given more lines than that).
   let minheight = get(b:, 'qf_resize_min_height', get(g:, 'qf_resize_min_height', -1))
@@ -125,10 +129,9 @@ function! qf_resize#adjust_window_height() abort
     return 0
   endif
   let maxheight = max([minheight, maxheight])
-  let lines = line('$')
   let qf_height = min([maxheight, lines])
   let diff = qf_height - cur_qf_height
-  call s:log(printf('maxheight: %d, minheight: %d, qf_height: %s, cur_qf_height: %d, diff: %d', maxheight, minheight, qf_height, cur_qf_height, diff))
+  call s:log(printf('maxheight: %d, minheight: %d, lines: %s, cur_qf_height: %d, diff: %d', maxheight, minheight, lines, cur_qf_height, diff))
   if diff == 0
     call s:log('no diff')
   else
