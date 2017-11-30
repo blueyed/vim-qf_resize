@@ -1,7 +1,5 @@
 Before:
   tabnew
-  Save g:qf_resize_in_test
-  let g:qf_resize_in_test = 1
 
 After:
   Restore
