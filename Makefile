@@ -14,15 +14,18 @@ _REDIR_STDOUT:=2>&1 </dev/null >/dev/null $(_SED_HIGHLIGHT_ERRORS) >&2
 
 test_nvim: TEST_VIM_BIN ?= nvim
 test_nvim: $(TESTS_VADER_DIR)
-	$(call func-run-tests,env VADER_OUTPUT_FILE=/dev/stderr nvim --headless)
+	$(call func-run-tests,env VADER_OUTPUT_FILE=/dev/stderr $(TEST_VIM_BIN) --headless)
 
 test_nvim_interactive: TEST_VIM_BIN ?= nvim
 test_nvim_interactive: _REDIR_STDOUT:=
 test_nvim_interactive: $(TESTS_VADER_DIR)
-	$(call func-run-tests,env HOME=$(shell mktemp -d) nvim)
+	$(call func-run-tests,$(TEST_VIM_BIN))
 
+run_nvim: _REDIR_STDOUT:=
+run_nvim: TEST_VIM_ARGS:=
+run_nvim: TEST_VIM_BIN ?= nvim
 run_nvim: $(TESTS_VADER_DIR)
-	HOME=$(shell mktemp -d) nvim -u test/vimrc
+	$(call func-run-tests)
 
 test_vim: TEST_VIM_BIN ?= vim
 test_vim: $(TESTS_VADER_DIR)
@@ -31,9 +34,10 @@ test_vim: $(TESTS_VADER_DIR)
 test_vim_interactive: _REDIR_STDOUT:=
 test_vim_interactive: test_vim
 
-_COVIMERAGE=$(if $(filter-out 0,$(VIM_QF_RESIZE_DO_COVERAGE)),covimerage run --append ,)
+_COVIMERAGE=$(if $(filter-out 0,$(VIM_QF_RESIZE_DO_COVERAGE)),covimerage run --append --no-report ,)
+TEST_VIM_ARGS=-c 'Vader! $(VADER_ARGS)'
 define func-run-tests
-	env TESTS_VADER_DIR=$(TESTS_VADER_DIR) $(_COVIMERAGE)$(1) --noplugin -Nu test/vimrc -c 'Vader! $(VADER_ARGS)' $(_REDIR_STDOUT)
+	$(_COVIMERAGE)env HOME=$(shell mktemp -d) TESTS_VADER_DIR=$(TESTS_VADER_DIR) $(or $(1),$(1),$(TEST_VIM_BIN)) --noplugin -Nu test/vimrc $(TEST_VIM_ARGS) $(_REDIR_STDOUT)
 endef
 
 build:

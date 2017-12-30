@@ -30,6 +30,7 @@ script: make $ENV
 after_success:
   - |
     if [ "$VIM_QF_RESIZE_DO_COVERAGE" = 1 ]; then
+      set -e
       coverage xml
       coverage report -m --skip-covered
       bash <(curl -s https://codecov.io/bash) -X search -X gcov -X coveragepy -f coverage.xml -F $ENV
