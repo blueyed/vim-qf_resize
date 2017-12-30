@@ -1,6 +1,6 @@
 SHELL:=/bin/bash -o pipefail
 
-VADER_ARGS:=test/*.vader
+VADER_ARGS:=$(VADER_OPTIONS) test/*.vader
 
 test: test_nvim
 
@@ -28,6 +28,10 @@ run_nvim: $(TESTS_VADER_DIR)
 test_vim: TEST_VIM_BIN ?= vim
 test_vim: $(TESTS_VADER_DIR)
 	$(call func-run-tests,$(TEST_VIM_BIN) -X)
+
+test_vim_interactive: _REDIR_STDOUT:=
+test_vim_interactive: $(TESTS_VADER_DIR)
+	vim --noplugin -Nu test/vimrc -c 'Vader $(VADER_ARGS)'
 
 define func-run-tests
 	$(1) --noplugin -Nu test/vimrc -c 'Vader! $(VADER_ARGS)' $(_REDIR_STDOUT)
