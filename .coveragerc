@@ -1,0 +1,4 @@
+[run]
+plugins = covimerage
+data_file = .coverage.covimerage
+include = autoload/*,plugin/*,test/*
