@@ -81,6 +81,9 @@ function! qf_resize#adjust_window_height(...) abort
   let cur_win = a:0 ? a:1 : winnr()
   call s:log('Called for window '.cur_win
         \ .'; window layout: '.string(map(range(1, winnr('$')), 'winheight(v:val)')))
+  if cur_win > winnr('$') || cur_win < 1
+    return
+  endif
 
   if !exists('b:_qf_resize_seen')
     let b:_qf_resize_seen = 1
