@@ -31,7 +31,7 @@ test_vim: $(TESTS_VADER_DIR)
 test_vim_interactive: _REDIR_STDOUT:=
 test_vim_interactive: test_vim
 
-_COVIMERAGE=$(if $(filter-out 0,$(VIM_QF_RESIZE_DO_COVERAGE)),covimerage run --append --no-report ,)
+_COVIMERAGE=$(if $(filter-out 0,$(VIM_QF_RESIZE_DO_COVERAGE)),covimerage run --append ,)
 define func-run-tests
 	env TESTS_VADER_DIR=$(TESTS_VADER_DIR) $(_COVIMERAGE)$(1) --noplugin -Nu test/vimrc -c 'Vader! $(VADER_ARGS)' $(_REDIR_STDOUT)
 endef
