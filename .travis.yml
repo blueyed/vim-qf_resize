@@ -9,9 +9,9 @@ matrix:
   fast_finish: true
   include:
     - env: ENV=vimlint
-    - env: ENV=test_nvim VIM_QF_RESIZE_TESTS_USE_FEEDKEYS=0
-    - env: ENV=test_nvim VIM_QF_RESIZE_TESTS_USE_FEEDKEYS=1
-    - env: ENV=test_vim
+    - env: ENV=test_nvim VIM_QF_RESIZE_TESTS_USE_FEEDKEYS=0 VIM_QF_RESIZE_DO_COVERAGE=1
+    - env: ENV=test_nvim VIM_QF_RESIZE_TESTS_USE_FEEDKEYS=1 VIM_QF_RESIZE_DO_COVERAGE=1
+    - env: ENV=test_vim VIM_QF_RESIZE_DO_COVERAGE=1
     - env: ENV=vint
       language: python
 
@@ -20,5 +20,18 @@ install:
     if [ "$ENV" = "test_nvim" ]; then
       eval "$(curl -Ss https://raw.githubusercontent.com/neovim/bot-ci/master/scripts/travis-setup.sh) nightly-x64"
     fi
+  - |
+    if [ "$VIM_QF_RESIZE_DO_COVERAGE" = 1 ]; then
+      pip install --user covimerage
+    fi
 
 script: make $ENV
+
+after_success:
+  - |
+    if [ "$VIM_QF_RESIZE_DO_COVERAGE" = 1 ]; then
+      set -e
+      coverage xml
+      coverage report -m --skip-covered
+      bash <(curl -s https://codecov.io/bash) -X search -X gcov -X coveragepy -f coverage.xml -F $ENV
+    fi

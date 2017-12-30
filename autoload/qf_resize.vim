@@ -8,7 +8,7 @@ endfunction
 function! s:log(msg) abort
   if exists('*vader#log')
     call vader#log(a:msg)
-  elseif &verbose
+  elseif &verbose || get(g:, 'qf_resize_debug', 0)
     echom 'adjust_window_height: '.a:msg
   endif
 endfunction
