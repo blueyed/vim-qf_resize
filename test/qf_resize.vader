@@ -276,3 +276,6 @@ Execute (Handles processing from another window):
   if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
 
   AssertEqual winheight(2), 2
+
+Execute (Handles processing with non-existing window):
+  call qf_resize#adjust_window_height(10000)
