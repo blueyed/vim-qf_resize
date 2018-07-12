@@ -276,3 +276,19 @@ Execute (Handles processing from another window):
   if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
 
   AssertEqual winheight(2), 2
+
+Execute (Handles missing window):
+  Save &lines
+  let &lines = 100
+
+  " Use a 2nd window to see that 0resize was not used.
+  split
+
+  laddexpr ''
+  lopen
+  let win = exists('*win_getid') ? win_getid() : winnr()
+  lclose
+
+  call qf_resize#adjust_window_height(win)
+
+  AssertEqual [['', 46], ['', 46]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')

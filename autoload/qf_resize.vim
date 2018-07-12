@@ -1,8 +1,14 @@
+let s:has_win_getid = exists('*win_getid')
+
 " Get max height, based on g:/b:qf_resize_max_ratio.
 function! qf_resize#get_maxheight(height) abort
   let ratio = get(b:, 'qf_resize_max_ratio', get(g:, 'qf_resize_max_ratio', 0.15))
   let maxheight = float2nr(round(a:height * ratio))
   return maxheight
+endfunction
+
+function! s:logging_enabled() abort
+  return exists('*vader#log') || &verbose || get(g:, 'qf_resize_debug', 0)
 endfunction
 
 function! s:log(msg) abort
@@ -77,10 +83,34 @@ function! s:restore_prev_windows() abort
   endif
 endfunction
 
+" cur_win (a:1) should be a window Id if win_getid() exists, otherwise winnr.
 function! qf_resize#adjust_window_height(...) abort
   let cur_win = a:0 ? a:1 : winnr()
-  call s:log('Called for window '.cur_win
-        \ .'; window layout: '.string(map(range(1, winnr('$')), 'winheight(v:val)')))
+  if a:0
+    let cur_win = a:1
+  else
+    let cur_win = s:has_win_getid ? win_getid() : winnr()
+  endif
+  if s:logging_enabled()
+    call s:log(printf('Called for window %d: window layout: %s',
+          \ cur_win,
+          \ string(map(range(1, winnr('$')), 'winheight(v:val)'))))
+  endif
+  if exists('*win_getid')
+    let winnr = win_id2win(cur_win)
+    if winnr == 0
+      call s:log(printf('no window found for ID %d', cur_win))
+      return
+    else
+      call s:log(printf('using winnr=%d for winid %d', winnr, cur_win))
+    endif
+  else
+    let winnr = cur_win
+    if winnr > winnr('$')
+      call s:log(printf('window %d does not exist', winnr))
+      return
+    endif
+  endif
 
   if !exists('b:_qf_resize_seen')
     let b:_qf_resize_seen = 1
@@ -96,7 +126,7 @@ function! qf_resize#adjust_window_height(...) abort
   endif
 
   " Get first non-qf window above.
-  let [non_fixed_above, qfs_above, lines] = s:get_nonfixed_above(cur_win)
+  let [non_fixed_above, qfs_above, lines] = s:get_nonfixed_above(winnr)
 
   " Get minimum height (given more lines than that).
   let minheight = get(b:, 'qf_resize_min_height', get(g:, 'qf_resize_min_height', -1))
@@ -105,7 +135,7 @@ function! qf_resize#adjust_window_height(...) abort
     if exists('b:dispatch')
       " dispatch.vim
       let minheight = 15
-    elseif getwinvar(cur_win, 'quickfix_title') =~# '\v^:.*py.?test'
+    elseif getwinvar(winnr, 'quickfix_title') =~# '\v^:.*py.?test'
       " test.vim, running pytest.
       let minheight = max([5, &lines/5])
     else
@@ -113,7 +143,7 @@ function! qf_resize#adjust_window_height(...) abort
     endif
   endif
 
-  let cur_qf_height = winheight(cur_win)
+  let cur_qf_height = winheight(winnr)
   let maxheight = get(b:, 'qf_resize_max_height', get(g:, 'qf_resize_max_height', 10))
   if non_fixed_above
     let non_fixed_above_height = winheight(non_fixed_above)
@@ -135,8 +165,9 @@ function! qf_resize#adjust_window_height(...) abort
   if diff == 0
     call s:log('no diff')
   else
-    call s:log('resizing (1): '.cur_win.' resize '.qf_height)
-    exe cur_win 'resize' qf_height
+    let cmd = winnr.' resize '.qf_height
+    call s:log('resizing (1): '.cmd)
+    exe cmd
 
     if qf_window_appeared && non_fixed_above == s:tracked_heights['WinLeave'][0]
       let old_size = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] - qf_height
@@ -193,7 +224,10 @@ function! qf_resize#adjust_window_heights(...) abort
       for w in windows
         let height_before = winheight(w)
         exe 'keepalt noautocmd' w 'wincmd w'
-        noautocmd let cur_changed = qf_resize#adjust_window_height() != 0
+        if exists('*win_getid')
+          let w = win_getid(w)
+        endif
+        noautocmd let cur_changed = qf_resize#adjust_window_height(w) != 0
         if cur_changed
           redraw
           let changed = 1
