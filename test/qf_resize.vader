@@ -1,6 +1,8 @@
 Before:
   tabnew
 
+  let g:qf_resize_test_messages = []
+
 After:
   Restore
   tabclose
@@ -14,18 +16,27 @@ Execute (Uses max 10):
   AssertEqual winheight(2), 10
 
 Execute (Uses min 1):
+  Save &lines
   let &lines = 10
   laddexpr ['1','2','3','4','5','6','7','8','9','10','11','12']
   TestLopen
   AssertEqual winheight(2), 1
 
-Execute (Uses g:qf_resize_min_height):
-  Save g:qf_resize_min_height
+Execute (g:qf_resize_min_height):
+  Save &lines, g:qf_resize_min_height
+  let g:qf_resize_min_height = 5
+  let &lines = 10
+  lgetexpr ['1','2','3','4','5','6','7','8','9','10','11','12']
+  TestLopen
+  AssertEqual [0, 4], map(range(1, winnr('$')), 'winheight(v:val)')
+
+Execute (g:qf_resize_min_height does not override lines):
+  Save &lines, g:qf_resize_min_height
   let g:qf_resize_min_height = 2
   let &lines = 10
-  laddexpr ['1','2','3','4','5','6','7','8','9','10','11','12']
+  lgetexpr ['1']
   TestLopen
-  AssertEqual winheight(2), 2
+  AssertEqual winheight(2), 1
 
 Execute (equalalways: 100 lines, ):
   Save &equalalways
@@ -95,7 +106,6 @@ Execute (noequalalways: 2 windows, 72/20 lines, 12 items in 2nd window):
   AssertEqual [72, 16, 3], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lgetexpr ['1']
-  if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
   AssertEqual [72, 18, 1], map(range(1, winnr('$')), 'winheight(v:val)')
   lclose
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
@@ -115,10 +125,18 @@ Execute (noequalalways: 2 windows, 72/20 lines, 12 items in 1st window):
   AssertEqual [61, 10, 20], map(range(1, winnr('$')), 'winheight(v:val)')
 
   lgetexpr ['1']
-  if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
-  AssertEqual [70, 1, 20], map(range(1, winnr('$')), 'winheight(v:val)')
+  if g:qf_resize_test_degraded
+    AssertNotEqual -1, index(g:qf_resize_test_messages, 'could not determine non-qf window above')
+    AssertEqual [61, 1, 29], map(range(1, winnr('$')), 'winheight(v:val)')
+  else
+    AssertEqual [70, 1, 20], map(range(1, winnr('$')), 'winheight(v:val)')
+  endif
   lclose
-  AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
+  if g:qf_resize_test_degraded
+    AssertEqual [63, 29], map(range(1, winnr('$')), 'winheight(v:val)')
+  else
+    AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
+  endif
 
 Execute (noequalalways: 2 windows, 72/20 lines, 1 item in 1st window):
   Save &equalalways
@@ -148,13 +166,37 @@ Execute (lopen with noautocmd and :QfResizeWindows):
   lgetexpr ['1']
 
   AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
-  exe 'source' fnamemodify(g:vader_file, ':h:h').'/plugin/qf_resize.vim'
+"   exe 'source' fnamemodify(g:vader_file, ':h:h').'/plugin/qf_resize.vim'
   noautocmd TestLopen
+
   QfResizeWindows
-  AssertEqual [70, 1, 20], map(range(1, winnr('$')), 'winheight(v:val)')
+  if g:qf_resize_test_degraded
+    AssertNotEqual -1, index(g:qf_resize_test_messages, 'could not determine non-qf window above')
+    AssertEqual [61, 1, 29] , map(range(1, winnr('$')), 'winheight(v:val)')
+  else
+    AssertEqual [70, 1, 20], map(range(1, winnr('$')), 'winheight(v:val)')
+  endif
 
   lclose
-  AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
+  if g:qf_resize_test_degraded
+    AssertEqual [63, 29], map(range(1, winnr('$')), 'winheight(v:val)')
+  else
+    AssertEqual [72, 20], map(range(1, winnr('$')), 'winheight(v:val)')
+  endif
+
+Execute (:QfResizeWindows gets delayed when used in autocmd):
+  let &lines = 100
+
+  lgetexpr ['1']
+  noautocmd lopen
+  AssertEqual [82, 10], map(range(1, winnr('$')), 'winheight(v:val)')
+
+  augroup qf_resize_tests
+    autocmd CursorHold * QfResizeWindows
+  augroup END
+  doautocmd CursorHold
+  AssertEqual [91, 1], map(range(1, winnr('$')), 'winheight(v:val)')
+  au! qf_resize_tests
 
 Execute (qf_resize#get_maxheight):
   AssertEqual qf_resize#get_maxheight(5), 1
@@ -261,6 +303,50 @@ Execute (normal, fixed, loclist):
 
   AssertEqual [['', 87], ['qf', 1], ['', 89], ['qf', 1], ['qf', 1]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
 
+Execute (normal | location list):
+  Save &equalalways
+  set noequalalways
+  let &lines = 100
+
+  laddexpr 'loc1'
+  TestLopen
+  wincmd L
+  AssertEqual [['', 93], ['qf', 93]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+"   AssertEqual qf_resize#_get_possible_nonfixed_above(winnr()), [[], [], line('$')]
+
+  wincmd p
+  cgetexpr 'loc2'
+  AssertEqual [['', 93], ['qf', 93]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+
+Execute (normal / normal | location list):
+  Save &equalalways
+  set noequalalways
+  let &lines = 100
+
+  below new
+
+  lgetexpr 'loc1'
+  lopen
+  AssertEqual [['', 46], ['', 44], ['qf', 1]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+  wincmd L
+  AssertEqual [['', 46], ['', 46], ['qf', 93]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+  if g:qf_resize_test_degraded
+    AssertEqual qf_resize#_get_possible_nonfixed_above(winnr()), [[2, 1], [], 1]
+  else
+    AssertEqual qf_resize#_get_possible_nonfixed_above(winnr()), [[], [], 1]
+  endif
+
+  wincmd p
+  lgetexpr 'loc2'
+
+  if g:qf_resize_test_degraded
+    AssertNotEqual -1, index(g:qf_resize_test_messages, 'could not determine non-qf window above')
+    AssertNotEqual -1, index(g:qf_resize_test_messages, 'skipping simple resize due to qf window being in a column by itself likely')
+    AssertEqual [['', 46], ['', 46], ['qf', 93]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+  else
+    AssertEqual [['', 46], ['', 46], ['qf', 93]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+  endif
+
 Execute (Handles processing from another window):
   Save &lines
   let &lines = 100
@@ -273,7 +359,6 @@ Execute (Handles processing from another window):
 
   " Set location list while in another window.
   call setloclist(0, [{'text': '1'}, {'text': '2'}])
-  if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
 
   AssertEqual winheight(2), 2
 
@@ -292,3 +377,73 @@ Execute (Handles missing window):
   call qf_resize#adjust_window_height(win)
 
   AssertEqual [['', 46], ['', 46]], map(range(1, winnr('$')), '[getwinvar(v:val, "&ft"), winheight(v:val)]')
+
+Execute (Handles already closed qf window with feedkeys):
+  " Open empty location list.
+  lgetexpr ''
+  lopen
+
+  " Closing it should not cause an error when processing it later.
+  lclose
+
+  AssertEqual winnr('$'), 1
+
+Execute (Handles insert mode):
+  if !exists('*timer_start')
+    Log 'SKIP: no timer_start'
+  else
+    lgetexpr ''
+
+    function! s:open_in_insert_mode(...)
+      AssertEqual mode(), 'i'
+      lopen
+      wincmd p
+      call feedkeys("\<esc>", 't')
+    endfunction
+
+    call timer_start(100, function('s:open_in_insert_mode'))
+    call feedkeys("ifoo", 'x!')
+
+    AssertEqual getline('.'), 'foo'
+    AssertEqual winheight(winnr('$')), 1
+  endif
+
+Execute (Handles visual mode):
+  lgetexpr ''
+  noautocmd lopen
+  wincmd p
+
+  norm! V
+  AssertEqual mode(), 'V'
+  call setloclist(0, [{'text': '1'}, {'text': '2'}])
+  " XXX: fails in older Vim (7.3.429), used on Travis.
+  if v:version >= 740
+    AssertEqual mode(), 'V'
+  endif
+  AssertEqual getbufline('%', 1, '$'), ['']
+  if v:version >= 740
+    AssertEqual mode(), 'V'
+  endif
+
+  AssertEqual winheight(winnr('$')), 2
+
+Execute (qf_resize#_get_possible_nonfixed_above with wide qf):
+  copen
+  wincmd w
+  vsp
+  AssertEqual winnr('$'), 3
+  " NOTE: nvim development has the patch, but does not report it currently.
+  if !has('patch-8.0.0677') && !exists('*nvim_win_get_position') && !g:qf_resize_test_degraded
+    AssertEqual qf_resize#_get_possible_nonfixed_above(3), [[1], [], 1]
+  else
+    AssertEqual qf_resize#_get_possible_nonfixed_above(3), [[2, 1], [], 1]
+  endif
+
+Execute (qf_resize#_get_possible_nonfixed_above gets lines correct):
+  cgetexpr '1'
+  caddexpr '2'
+  copen
+  wincmd w
+  AssertEqual winnr('$'), 2
+  AssertEqual len(getqflist()), 2
+  AssertEqual qf_resize#_get_possible_nonfixed_above(2), [[1], [], 2]

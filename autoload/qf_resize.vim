@@ -1,4 +1,12 @@
 let s:has_win_getid = exists('*win_getid')
+let s:has_new_api = exists('*win_screenpos') || exists('*nvim_win_get_position')
+let s:degraded = has('patch-8.0.0677') && !s:has_new_api
+
+if s:degraded && !get(g:, 'qf_resize_no_warning', 0)
+  echohl WarningMsg
+  echom 'qf_resize: paritally degraded due to using Vim 8.0.0677-8.0.1364 (set g:qf_resize_no_warning=1 to skip this warning).'
+  echohl None
+endif
 
 " Get max height, based on g:/b:qf_resize_max_ratio.
 function! qf_resize#get_maxheight(height) abort
@@ -14,43 +22,123 @@ endfunction
 function! s:log(msg) abort
   if exists('*vader#log')
     call vader#log(a:msg)
+    call insert(get(g:, 'qf_resize_test_messages', []), a:msg)
   elseif &verbose || get(g:, 'qf_resize_debug', 0)
     echom 'adjust_window_height: '.a:msg
   endif
 endfunction
 
-function! s:get_nonfixed_above(win) abort
-  if a:win == 1
-    return [0, [], line('$')]
-  endif
-  let qfs_above = []
-  let restore = winnr()
-  try
-    if a:win != restore
-      exe 'keepalt noautocmd' a:win 'wincmd w'
+if exists('*win_screenpos')
+  function! s:get_win_col(winid) abort
+    return win_screenpos(a:winid)[1]
+  endfunction
+
+elseif exists('*nvim_win_get_position')
+  function! s:get_win_col(winid) abort
+    return nvim_win_get_position(a:winid)[1] + 1
+  endfunction
+endif
+
+if exists('*nvim_buf_line_count')
+  function! s:get_line_count(winnr) abort
+    return nvim_buf_line_count(winbufnr(a:winnr))
+  endfunction
+else
+  function! s:get_line_count(winnr) abort
+    " XXX: optimize?! should not fetch the whole list!
+    return a:winnr == winnr() ? line('$') : len(getbufline(winbufnr(a:winnr), 1, '$'))
+  endfunction
+endif
+
+if s:has_new_api
+  function! qf_resize#_get_possible_nonfixed_above(winnr) abort
+    let lines = max([1, s:get_line_count(a:winnr)])
+    if a:winnr == 1
+      return [[], [], lines]
     endif
-    let lines = line('$')
-    let prev_winnr = a:win
-    while 1
-      exe 'noautocmd wincmd k'
-      let w = winnr()
-      if w == prev_winnr
-        return [0, qfs_above, lines]
+
+    let winid = win_getid(a:winnr)
+
+    let qfs_above = []
+    let cur_width = winwidth(a:winnr)
+    let cur_col = s:get_win_col(winid)
+    let possible_non_fixed_above = []
+    let w = a:winnr
+    while w > 1
+      let w -= 1
+      let w_col = s:get_win_col(win_getid(w))
+
+      " Same column means that it might be above (depending on splitting).
+      if w_col >= cur_col && w_col <= cur_col + cur_width
+        if !getwinvar(w, '&winfixheight')
+          let possible_non_fixed_above += [w]
+        elseif getwinvar(w, '&filetype') ==# 'qf'
+          let qfs_above += [w]
+        endif
       endif
-      if !&winfixheight
-        return [w, qfs_above, lines]
-      endif
-      if &filetype ==# 'qf'
+    endwhile
+    return [possible_non_fixed_above, qfs_above, lines]
+  endfunction
+
+elseif has('patch-8.0.0677')
+  " Intermediate: no new API, but patch v8.0.0677 disallows 'wincmd k' in
+  " FileType autocommands.  This method returns windows only according to the
+  " index.
+  function! qf_resize#_get_possible_nonfixed_above(winnr) abort
+    let lines = s:get_line_count(a:winnr)
+    if a:winnr == 1
+      return [[], [], lines]
+    endif
+    let qfs_above = []
+    let w = a:winnr
+    let possible_non_fixed_above = []
+    while w > 1
+      let w -= 1
+      if !getwinvar(w, '&winfixheight')
+        let possible_non_fixed_above += [w]
+      elseif getwinvar(w, '&filetype') ==# 'qf'
         let qfs_above += [w]
       endif
-      let prev_winnr = w
     endwhile
-  finally
-    if winnr() != restore
-      exe 'keepalt noautocmd' restore 'wincmd w'
-    endif
-  endtry
-endfunction
+    return [possible_non_fixed_above, qfs_above, lines]
+  endfunction
+
+else
+  " Fallback: use 'wincmd k' to get windows above (original method).
+  function! qf_resize#_get_possible_nonfixed_above(winnr) abort
+    let restore = winnr()
+    try
+      if a:winnr != restore
+        exe 'keepalt noautocmd' a:winnr 'wincmd w'
+      endif
+      let lines = s:get_line_count(a:winnr)
+      if a:winnr == 1
+        return [[], [], lines]
+      endif
+      let qfs_above = []
+      let possible_non_fixed_above = []
+      let prev_winnr = a:winnr
+      while 1
+        exe 'noautocmd wincmd k'
+        let w = winnr()
+        if w == prev_winnr
+          break
+        endif
+        if !getwinvar(w, '&winfixheight')
+          let possible_non_fixed_above += [w]
+        elseif getwinvar(w, '&filetype') ==# 'qf'
+          let qfs_above += [w]
+        endif
+        let prev_winnr = w
+      endwhile
+    finally
+      if winnr() != restore
+        exe 'keepalt noautocmd' restore 'wincmd w'
+      endif
+    endtry
+    return [possible_non_fixed_above, qfs_above, lines]
+  endfunction
+endif
 
 let s:prev_windows = []
 function! s:save_prev_windows() abort
@@ -83,9 +171,12 @@ function! s:restore_prev_windows() abort
   endif
 endfunction
 
+" Ignore may-not-be-initialized warnings - pretty bad, but ok for now.
+" @vimlint(EVL104, 1, l:left_window)
+" @vimlint(EVL104, 1, l:height)
+" @vimlint(EVL104, 1, l:non_fixed_above_height)
 " cur_win (a:1) should be a window Id if win_getid() exists, otherwise winnr.
 function! qf_resize#adjust_window_height(...) abort
-  let cur_win = a:0 ? a:1 : winnr()
   if a:0
     let cur_win = a:1
   else
@@ -112,27 +203,30 @@ function! qf_resize#adjust_window_height(...) abort
     endif
   endif
 
-  if !exists('b:_qf_resize_seen')
-    let b:_qf_resize_seen = 1
+  let bufnr = winbufnr(winnr)
+
+  if !getbufvar(bufnr, '_qf_resize_seen')
+    call setbufvar(bufnr, '_qf_resize_seen', 1)
+    let is_loc = !empty(getloclist(0))
+    call setbufvar(bufnr, '_qf_resize_isLoc', is_loc)
     let qf_window_appeared = 1
     if !has_key(s:tracked_heights, 'WinEnter')
           \ || s:tracked_heights['WinEnter'][0] != winnr()
       " Happens when using 'noautocmd lopen', or :lopen being used from a
       " non-nested autocommand.
       let qf_window_appeared = 0
+    else
+      let left_window = s:tracked_heights['WinLeave'][0]
     endif
   else
     let qf_window_appeared = 0
   endif
 
-  " Get first non-qf window above.
-  let [non_fixed_above, qfs_above, lines] = s:get_nonfixed_above(winnr)
-
   " Get minimum height (given more lines than that).
   let minheight = get(b:, 'qf_resize_min_height', get(g:, 'qf_resize_min_height', -1))
   if minheight == -1
     " Some opinionated defaults.
-    if exists('b:dispatch')
+    if !empty(getbufvar(bufnr, 'dispatch'))
       " dispatch.vim
       let minheight = 15
     elseif getwinvar(winnr, 'quickfix_title') =~# '\v^:.*py.?test'
@@ -143,25 +237,42 @@ function! qf_resize#adjust_window_height(...) abort
     endif
   endif
 
-  let cur_qf_height = winheight(winnr)
-  let maxheight = get(b:, 'qf_resize_max_height', get(g:, 'qf_resize_max_height', 10))
-  if non_fixed_above
-    let non_fixed_above_height = winheight(non_fixed_above)
-
-    if qf_window_appeared && non_fixed_above == s:tracked_heights['WinLeave'][0]
-      let height = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] + 1
-    else
-      let height = non_fixed_above_height + cur_qf_height + 1
-    endif
-    let maxheight = min([maxheight, qf_resize#get_maxheight(height)])
-  else
+  let [possible_non_fixed_above, qfs_above, lines] = qf_resize#_get_possible_nonfixed_above(winnr)
+  if empty(possible_non_fixed_above)
     call s:log('no non-qf window above')
     return 0
   endif
+
+  let maxheight = get(b:, 'qf_resize_max_height', get(g:, 'qf_resize_max_height', 10))
+  let cur_qf_height = winheight(cur_win)
+
+  let non_fixed_above = -1
+
+  if qf_window_appeared && index(possible_non_fixed_above, left_window) != -1
+    let non_fixed_above = left_window
+    let height = s:tracked_heights['WinLeave'][1] + s:tracked_heights['WinEnter'][1] + 1
+    let non_fixed_above_height = winheight(non_fixed_above)
+  elseif !s:degraded
+    let non_fixed_above = possible_non_fixed_above[0]
+    let non_fixed_above_height = winheight(non_fixed_above)
+    let height = non_fixed_above_height + cur_qf_height + 1
+  else
+    call s:log('could not determine non-qf window above')
+    if &lines - cur_qf_height - &cmdheight < 5
+      " This means/assumes that the qf window is in a column by itself.
+      call s:log('skipping simple resize due to qf window being in a column by itself likely')
+      return
+    endif
+  endif
+  if non_fixed_above > 0
+    let maxheight = min([maxheight, qf_resize#get_maxheight(height)])
+  endif
+
   let maxheight = max([minheight, maxheight])
   let qf_height = min([maxheight, lines])
   let diff = qf_height - cur_qf_height
-  call s:log(printf('maxheight: %d, minheight: %d, lines: %s, cur_qf_height: %d, diff: %d', maxheight, minheight, lines, cur_qf_height, diff))
+  call s:log(printf('maxheight: %d, minheight: %d, lines: %s, cur_qf_height: %d, qf_height: %d, diff: %d',
+        \ maxheight, minheight, lines, cur_qf_height, qf_height, diff))
   if diff == 0
     call s:log('no diff')
   else
@@ -174,7 +285,7 @@ function! qf_resize#adjust_window_height(...) abort
       call s:log('resizing non_fixed_above: '.non_fixed_above.' resize '.old_size)
       exe non_fixed_above.'resize '.old_size
       let s:tracked_heights = {}
-    else
+    elseif non_fixed_above != -1
       let above_new_height = non_fixed_above_height - diff
       if above_new_height != winheight(non_fixed_above)
         call s:log('resizing non_fixed_above (2): '.non_fixed_above.' resize '.above_new_height)
@@ -189,6 +300,9 @@ function! qf_resize#adjust_window_height(...) abort
   endif
   return diff
 endfunction
+" @vimlint(EVL104, 0, l:left_window)
+" @vimlint(EVL104, 0, l:height)
+" @vimlint(EVL104, 0, l:non_fixed_above_height)
 
 function! qf_resize#adjust_window_heights(...) abort
   if a:0
@@ -223,7 +337,6 @@ function! qf_resize#adjust_window_heights(...) abort
       let max_loops -= 1
       for w in windows
         let height_before = winheight(w)
-        exe 'keepalt noautocmd' w 'wincmd w'
         if exists('*win_getid')
           let w = win_getid(w)
         endif

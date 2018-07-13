@@ -3,10 +3,6 @@
 
 set noloadplugins
 
-if exists('$VIM_QF_RESIZE_TESTS_USE_FEEDKEYS')
-  let g:qf_resize_use_feedkeys = $VIM_QF_RESIZE_TESTS_USE_FEEDKEYS
-endif
-
 if exists('$TESTS_VADER_DIR')
   let vader_dir = expand($TESTS_VADER_DIR)
 else
@@ -14,6 +10,9 @@ else
 endif
 let &runtimepath .= ','.vader_dir
 exe 'source' vader_dir.'/plugin/vader.vim'
+
+" No warning, since otherwise Vim hangs on the hit-Enter prompt during tests.
+let g:qf_resize_no_warning = 1
 
 let plugin_dir = expand('<sfile>:p:h:h')
 let &runtimepath .= ','.plugin_dir
@@ -58,12 +57,12 @@ set nomore
 
 function! TestLopen()
   lopen
-  if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
 endfunction
 command TestLopen call TestLopen()
 
 function! TestCopen()
   copen
-  if g:qf_resize_use_feedkeys | call feedkeys('', 'x') | endif
 endfunction
 command TestCopen call TestCopen()
+
+let g:qf_resize_test_degraded = has('patch-8.0.0677') && !(exists('*win_screenpos') || exists('*nvim_win_get_position'))
