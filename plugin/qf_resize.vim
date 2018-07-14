@@ -11,8 +11,21 @@ endif
 
 function! s:qf_resize_via_feedkeys() abort
   let win = s:has_win_getid ? win_getid() : winnr()
-  call feedkeys("\<C-\>\<C-n>:call qf_resize#adjust_window_height(".win.")\n", 'n')
+  call add(s:feedkeys_stack, win)
+  call feedkeys("\<Plug>(qf_resize_via_feedkeys)", 't')
 endfunction
+
+" Use a stack for the winnr.
+let s:feedkeys_stack = []
+function! qf_resize#feedkeys_map() abort
+  let win = remove(s:feedkeys_stack, 0)
+  call qf_resize#adjust_window_height(win)
+endfunction
+"
+" TODO: incomplete?
+nnoremap <Plug>(qf_resize_via_feedkeys) :<C-U>call qf_resize#feedkeys_map()<CR>
+inoremap <Plug>(qf_resize_via_feedkeys) <C-\><C-O>:<C-U>call qf_resize#feedkeys_map()<CR>
+vnoremap <Plug>(qf_resize_via_feedkeys) :<C-U>call qf_resize#feedkeys_map()<CR>gv
 
 augroup qf_resize
   au!
