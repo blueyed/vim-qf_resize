@@ -50,7 +50,7 @@ build/vader: | build
 	git clone --depth=1 -b display-source-with-exceptions https://github.com/blueyed/vader.vim $@
 
 build/vint: | build
-	virtualenv $@
+	virtualenv -p python3 $@
 	$@/bin/pip install vim-vint
 vint: build/vint
 	build/vint/bin/vint $(LINT_ARGS)
