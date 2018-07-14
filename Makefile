@@ -10,7 +10,7 @@ test: test_nvim
 _SED_HIGHLIGHT_ERRORS:=| contrib/highlight-log --compact vader
 # Need to close stdin to fix spurious 'sed: couldn't write X items to stdout: Resource temporarily unavailable'.
 # Redirect to stderr again for Docker (where only stderr is used from).
-_REDIR_STDOUT:=2>&1 </dev/null >/dev/null $(_SED_HIGHLIGHT_ERRORS) >&2
+_REDIR_STDOUT:=2>&1 </dev/null >/dev/null $(_SED_HIGHLIGHT_ERRORS)
 
 test_nvim: TEST_VIM_BIN ?= nvim
 test_nvim: $(TESTS_VADER_DIR)
@@ -37,7 +37,7 @@ test_vim_interactive: test_vim
 _COVIMERAGE=$(if $(filter-out 0,$(VIM_QF_RESIZE_DO_COVERAGE)),covimerage run --append --no-report ,)
 TEST_VIM_ARGS=-c 'Vader! $(VADER_ARGS)'
 define func-run-tests
-	$(_COVIMERAGE)env HOME=$(shell mktemp -d) TESTS_VADER_DIR=$(TESTS_VADER_DIR) $(or $(1),$(1),$(TEST_VIM_BIN)) --noplugin -Nu test/vimrc $(TEST_VIM_ARGS) $(_REDIR_STDOUT)
+	$(_COVIMERAGE)env HOME=$(shell mktemp -d) TESTS_VADER_DIR=$(TESTS_VADER_DIR) $(or $(1),$(1),$(TEST_VIM_BIN)) --noplugin -Nu test/vimrc -s /dev/null $(TEST_VIM_ARGS) $(_REDIR_STDOUT)
 endef
 
 build:
