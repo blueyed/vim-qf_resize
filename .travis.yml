@@ -11,6 +11,9 @@ matrix:
     - env: ENV=vimlint
     - env: ENV=test_nvim VIM_QF_RESIZE_DO_COVERAGE=1
     - env: ENV=test_vim VIM_QF_RESIZE_DO_COVERAGE=1
+    - env: ENV=test_docker VIM_QF_RESIZE_DO_COVERAGE=1
+      services:
+        - docker
     - env: ENV=vint
       language: python
       python: 3.6
