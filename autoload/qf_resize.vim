@@ -385,3 +385,21 @@ function! qf_resize#track_heights(event) abort
         \ a:event, winnr(), string(s:tracked_heights)))
   call s:log(string(map(range(1, winnr('$')), 'winheight(v:val)')))
 endfunction
+
+function! qf_resize#on_QuickFixCmdPost() abort
+  let buf = expand('<abuf>')
+  let cmd = expand('<amatch>')
+  call s:log(printf('QuickFixCmdPost: amatch=%s, buf=%d, winnr=%d, ft=%s', cmd, buf, winnr(), &filetype))
+  if empty(cmd)
+    return
+  endif
+  let winid = 0
+  if cmd[0] ==# 'c'
+    let winid = get(getqflist({'winid': 1}), 'winid', 0)
+  else
+    let winid = get(getloclist(0, {'winid': 1}), 'winid', 0)
+  endif
+  if winid
+    call qf_resize#adjust_window_height(winid)
+  endif
+endfunction

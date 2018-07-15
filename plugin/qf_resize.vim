@@ -7,6 +7,7 @@ augroup qf_resize
   au!
   au FileType   qf call qf_resize#adjust_window_height()
   au VimResized *  call qf_resize#adjust_window_heights()
+  au QuickFixCmdPost * call qf_resize#on_QuickFixCmdPost()
 
   if get(g:, 'qf_resize_on_win_close', 1)
     au WinEnter * call qf_resize#adjust_on_winquit()

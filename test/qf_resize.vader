@@ -427,6 +427,17 @@ Execute (Handles visual mode):
 
   AssertEqual winheight(winnr('$')), 2
 
+Execute (laddexpr adjusts height):
+  Save &equalalways
+  set noequalalways
+  let &lines = 100
+
+  lgetexpr 'loc1'
+  TestLopen
+  AssertEqual winheight(0), 1
+  laddexpr 'loc2'
+  AssertEqual winheight(0), 2
+
 Execute (qf_resize#_get_possible_nonfixed_above with wide qf):
   copen
   wincmd w
