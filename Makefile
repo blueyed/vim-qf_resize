@@ -34,10 +34,18 @@ test_vim: $(TESTS_VADER_DIR)
 test_vim_interactive: _REDIR_STDOUT:=
 test_vim_interactive: test_vim
 
-_COVIMERAGE=$(if $(filter-out 0,$(VIM_QF_RESIZE_DO_COVERAGE)),covimerage run --append --no-report ,)
+# Ad-hoc, to cover the intermediate case (patch-8.0.0677).
+# Uses v8.0.0688, which fixed the :resize also disallowed in v8.0.0677.
+test_docker: _REDIR_STDOUT:=
+test_docker: TEST_VIM_BIN=docker run --rm -v $(PWD):/testplugin -w /testplugin -e TESTS_VADER_DIR=/testplugin/build/vader thinca/vim:v8.0.0688
+test_docker: $(TESTS_VADER_DIR)
+	$(call func-run-tests,$(TEST_VIM_BIN) -X)
+
+_COVIMERAGE=$(if $(filter-out 0,$(VIM_QF_RESIZE_DO_COVERAGE)),covimerage run --profile-file build/covimerage.profile --no-report --no-write-data ,)
 TEST_VIM_ARGS=-c 'Vader! $(VADER_ARGS)'
 define func-run-tests
 	$(_COVIMERAGE)env HOME=$(shell mktemp -d) TESTS_VADER_DIR=$(TESTS_VADER_DIR) $(or $(1),$(1),$(TEST_VIM_BIN)) --noplugin -Nu test/vimrc -s /dev/null $(TEST_VIM_ARGS) $(_REDIR_STDOUT)
+	$(if $(filter-out 0,$(VIM_QF_RESIZE_DO_COVERAGE)),sed -i 's~/testplugin/~$(CURDIR)/~' build/covimerage.profile;covimerage write_coverage build/covimerage.profile,)
 endef
 
 build:
@@ -50,7 +58,7 @@ build/vader: | build
 	git clone --depth=1 -b display-source-with-exceptions https://github.com/blueyed/vader.vim $@
 
 build/vint: | build
-	virtualenv $@
+	virtualenv -p python3 $@
 	$@/bin/pip install vim-vint
 vint: build/vint
 	build/vint/bin/vint $(LINT_ARGS)
