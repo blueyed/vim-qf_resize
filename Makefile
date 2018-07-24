@@ -74,7 +74,7 @@ vimlint: build/vimlint build/vimlparser
 	build/vimlint/bin/vimlint.sh -u -l build/vimlint -p build/vimlparser $(LINT_ARGS)
 
 testcoverage:
-	$(RM) .coverage.covimerage
+	$(RM) .coverage_covimerage
 	@ret=0; \
 	for testfile in $(VADER_ARGS); do \
 	  make test VADER_ARGS=$$testfile VIM_QF_RESIZE_DO_COVERAGE=1 || (( ++ret )); \

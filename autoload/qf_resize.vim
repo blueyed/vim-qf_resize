@@ -24,7 +24,7 @@ function! s:log(msg) abort
     call vader#log(a:msg)
     call insert(get(g:, 'qf_resize_test_messages', []), a:msg)
   elseif &verbose || get(g:, 'qf_resize_debug', 0)
-    echom 'adjust_window_height: '.a:msg
+    unsilent echom 'qf_resize: '.a:msg
   endif
 endfunction
 
@@ -171,6 +171,17 @@ function! s:restore_prev_windows() abort
   endif
 endfunction
 
+" @vimlint(EVL102, 1, l:wincnt)
+function! s:get_window_layout_str() abort
+  let wincnt = winnr('$')
+  return join(map(range(1, winnr('$')),
+          \   "v:val.'/'.wincnt.': ['."
+          \  ."'ft='.getwinvar(v:val, '&filetype'). "
+          \  ."', bt='.getwinvar(v:val, '&buftype'). "
+          \  ."', height='.winheight(v:val).']'"), '; ')
+endfunction
+" @vimlint(EVL102, 0, l:wincnt)
+
 " Ignore may-not-be-initialized warnings - pretty bad, but ok for now.
 " @vimlint(EVL104, 1, l:left_window)
 " @vimlint(EVL104, 1, l:height)
@@ -183,9 +194,10 @@ function! qf_resize#adjust_window_height(...) abort
     let cur_win = s:has_win_getid ? win_getid() : winnr()
   endif
   if s:logging_enabled()
-    call s:log(printf('Called for window %d: window layout: %s',
-          \ cur_win,
-          \ string(map(range(1, winnr('$')), 'winheight(v:val)'))))
+    call s:log(printf('Called for window %s (title=%s); layout: [%s]',
+          \ cur_win . (s:has_win_getid ? ' ('.win_id2win(cur_win).')' : ''),
+          \ get(w:, 'quickfix_title', ''),
+          \ s:get_window_layout_str()))
   endif
   if exists('*win_getid')
     let winnr = win_id2win(cur_win)
@@ -383,13 +395,12 @@ function! qf_resize#track_heights(event) abort
   endif
   call s:log(printf('tracked_heights: %s (#%d): %s',
         \ a:event, winnr(), string(s:tracked_heights)))
-  call s:log(string(map(range(1, winnr('$')), 'winheight(v:val)')))
 endfunction
 
 function! qf_resize#on_QuickFixCmdPost() abort
   let buf = expand('<abuf>')
   let cmd = expand('<amatch>')
-  call s:log(printf('QuickFixCmdPost: amatch=%s, buf=%d, winnr=%d, ft=%s', cmd, buf, winnr(), &filetype))
+  call s:log(printf('QuickFixCmdPost: amatch=%s, buf=%d, winnr=%d, ft=%s, layout=%s', cmd, buf, winnr(), &filetype, s:get_window_layout_str()))
   if empty(cmd)
     return
   endif
