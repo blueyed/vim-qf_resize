@@ -1,4 +1,4 @@
 [run]
 plugins = covimerage
-data_file = .coverage.covimerage
+data_file = .coverage_covimerage
 include = autoload/*,plugin/*,test/*
