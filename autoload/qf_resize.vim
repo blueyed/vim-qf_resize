@@ -4,7 +4,7 @@ let s:degraded = has('patch-8.0.0677') && !s:has_new_api
 
 if s:degraded && !get(g:, 'qf_resize_no_warning', 0)
   echohl WarningMsg
-  echom 'qf_resize: paritally degraded due to using Vim 8.0.0677-8.0.1364 (set g:qf_resize_no_warning=1 to skip this warning).'
+  echom 'qf_resize: partially degraded due to using Vim 8.0.0677-8.0.1364 (set g:qf_resize_no_warning=1 to skip this warning).'
   echohl None
 endif
 
